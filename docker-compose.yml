@@ -1,12 +1,22 @@
-version: "3.9"
 services:
+  # Database migrations service
+  migrate:
+    image: migrate/migrate
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend/db/migrations:/migrations
+    command: ["-path", "/migrations", "-database", "postgres://postgres:postgres@db:5432/stock_management?sslmode=disable", "up"]
+    restart: "no"
+
   backend:
     build: ./backend
     ports:
       - "8080:8080"
     depends_on:
-      db:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     environment:
       - DB_HOST=db
       - DB_USER=postgres
@@ -25,7 +35,6 @@ services:
       POSTGRES_DB: stock_management
     volumes:
       - db_data:/var/lib/postgresql/data
-      - ./backend/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
