@@ -7,6 +7,7 @@
 
 # Binaries for programs and plugins
 bin/
+backend/main
 
 # Test binary, built with `go test -c`
 *.test
