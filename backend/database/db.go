@@ -116,3 +116,28 @@ func (db *DB) ValidatePassword(user *models.User, password string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))
 	return err == nil
 }
+
+// GetUsersByTenant retrieves all users for a given tenant
+func (db *DB) GetUsersByTenant(tenantID uuid.UUID) ([]*models.User, error) {
+	query := `SELECT id, email, password_hash, tenant_id, role, created_at FROM users WHERE tenant_id = $1 ORDER BY created_at DESC`
+	
+	rows, err := db.Query(query, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []*models.User
+	for rows.Next() {
+		user := &models.User{}
+		err := rows.Scan(
+			&user.ID, &user.Email, &user.PasswordHash, &user.TenantID, &user.Role, &user.CreatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		users = append(users, user)
+	}
+
+	return users, rows.Err()
+}

@@ -90,6 +90,35 @@ func RequireRole(role string) func(http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+// RequireMinimumRole creates a middleware that checks if the user has at least the minimum required role
+func RequireMinimumRole(minRole string) func(http.HandlerFunc) http.HandlerFunc {
+	roleHierarchy := map[string]int{
+		models.RoleStaff:   1,
+		models.RoleManager: 2,
+		models.RoleAdmin:   3,
+	}
+
+	return func(next http.HandlerFunc) http.HandlerFunc {
+		return JWTMiddleware(func(w http.ResponseWriter, r *http.Request) {
+			claims, ok := GetUserFromContext(r)
+			if !ok {
+				http.Error(w, "User not found in context", http.StatusUnauthorized)
+				return
+			}
+
+			userRoleLevel := roleHierarchy[claims.Role]
+			minRoleLevel := roleHierarchy[minRole]
+
+			if userRoleLevel < minRoleLevel {
+				http.Error(w, "Insufficient permissions", http.StatusForbidden)
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
 // GenerateJWT creates a new JWT token for the user
 func GenerateJWT(user *models.User) (string, error) {
 	claims := &models.JWTClaims{
