@@ -1,0 +1,46 @@
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: stock_management_postgres
+    env_file:
+      - docker.env
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+    ports:
+      - "${HOST_PORT}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    networks:
+      - stock_management_network
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: stock_management_api:latest
+    container_name: stock_management_api
+    env_file:
+      - .env
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - DB_SSLMODE=disable
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+    networks:
+      - stock_management_network
+
+volumes:
+  postgres_data:
+
+networks:
+  stock_management_network:
+    driver: bridge

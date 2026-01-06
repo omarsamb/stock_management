@@ -1,43 +1,44 @@
-import { useState } from 'preact/hooks'
-import preactLogo from './assets/preact.svg'
-import viteLogo from '/vite.svg'
-import './app.css'
+import { useState, useEffect } from 'preact/hooks';
+import { Router, route } from 'preact-router';
+import { Dashboard } from './pages/Dashboard';
+import { Catalogue } from './pages/Catalogue';
+import { Stocks } from './pages/Stocks';
+import { Shops } from './pages/Shops';
+import { Login } from './pages/Login';
+import { Register } from './pages/Register';
+import { Navbar } from './components/Navbar';
 
 export function App() {
-  const [count, setCount] = useState(0)
+  const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'));
+
+  useEffect(() => {
+    const checkAuth = () => {
+      const token = localStorage.getItem('token');
+      setIsAuthenticated(!!token);
+      if (!token && window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+        route('/login');
+      }
+    };
+
+    window.addEventListener('auth-change', checkAuth);
+    checkAuth();
+
+    return () => window.removeEventListener('auth-change', checkAuth);
+  }, []);
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} class="logo" alt="Vite logo" />
-        </a>
-        <a href="https://preactjs.com" target="_blank">
-          <img src={preactLogo} class="logo preact" alt="Preact logo" />
-        </a>
-      </div>
-      <h1>Vite + Preact</h1>
-      <div class="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/app.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p>
-        Check out{' '}
-        <a
-          href="https://preactjs.com/guide/v10/getting-started#create-a-vite-powered-preact-app"
-          target="_blank"
-        >
-          create-preact
-        </a>
-        , the official Preact + Vite starter
-      </p>
-      <p class="read-the-docs">
-        Click on the Vite and Preact logos to learn more
-      </p>
-    </>
-  )
+    <div className="app-container">
+      {isAuthenticated && <Navbar />}
+      <main className={isAuthenticated ? "content" : "auth-content"}>
+        <Router>
+          <Dashboard path="/" />
+          <Catalogue path="/catalogue" />
+          <Stocks path="/stocks" />
+          <Shops path="/shops" />
+          <Login path="/login" />
+          <Register path="/register" />
+        </Router>
+      </main>
+    </div>
+  );
 }
