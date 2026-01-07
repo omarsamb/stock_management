@@ -39,7 +39,7 @@ func SetupRoutes(sm *services.ServicesManager) *gin.Engine {
 		api.POST("/subscription/webhook/paydunya", subscriptionHandler.HandlePayDunyaWebhook)
 
 		// Protected Routes
-		protected := api.Group("/")
+		protected := api.Group("")
 		protected.Use(middleware.AuthMiddleware(sm.JWTSecret))
 		protected.Use(middleware.EnforceSubscriptionMiddleware(sm.DB))
 		{
@@ -49,16 +49,22 @@ func SetupRoutes(sm *services.ServicesManager) *gin.Engine {
 
 			// Users
 			protected.POST("/users/invite", authHandler.InviteUser)
+			protected.GET("/users", authHandler.ListUsers)
+			protected.PUT("/users/:id", authHandler.UpdateUser)
+			protected.DELETE("/users/:id", authHandler.DeleteUser)
 
 			// Subscription
 			protected.POST("/subscription/select", subscriptionHandler.SelectPlan)
 
 			// Profile
 			protected.PUT("/auth/profile", authHandler.UpdateProfile)
+			protected.POST("/auth/change-password", authHandler.ChangePassword)
+			protected.PUT("/auth/theme", authHandler.UpdateTheme)
 
 			// Articles
 			protected.POST("/articles", articleHandler.CreateArticle)
 			protected.GET("/articles", articleHandler.ListArticles)
+			protected.PUT("/articles/:id", articleHandler.UpdateArticle)
 			protected.POST("/articles/import", articleHandler.ImportArticles)
 
 			// Dashboard

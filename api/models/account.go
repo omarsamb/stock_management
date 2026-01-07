@@ -21,6 +21,8 @@ type Account struct {
 	CompanyName           string         `gorm:"not null" json:"company_name"`
 	SubscriptionPlan      string         `gorm:"not null" json:"subscription_plan"` // basic, pro, premium
 	Status                AccountStatus  `gorm:"default:'trial'" json:"status"`
+	PrimaryColor          string         `gorm:"default:'#4f46e5'" json:"primary_color"`
+	BackgroundImage       string         `json:"background_image"`
 	SubscriptionExpiresAt *time.Time     `json:"subscription_expires_at"`
 	CreatedAt             time.Time      `json:"created_at"`
 	UpdatedAt             time.Time      `json:"updated_at"`

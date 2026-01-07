@@ -88,3 +88,35 @@ func (h *ArticleHandler) ImportArticles(c *gin.Context) {
 		"imported": count,
 	})
 }
+
+func (h *ArticleHandler) UpdateArticle(c *gin.Context) {
+	var req dto.UpdateArticleRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	articleIDStr := c.Param("id")
+	articleID, _ := uuid.Parse(articleIDStr)
+
+	accountIDStr := c.GetString("account_id")
+	accountID, _ := uuid.Parse(accountIDStr)
+
+	var article models.Article
+	if err := h.Service.DB.Where("id = ? AND account_id = ?", articleID, accountID).First(&article).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Article not found"})
+		return
+	}
+
+	article.Name = req.Name
+	article.Description = req.Description
+	article.MinThreshold = req.MinThreshold
+	article.Price = req.Price
+
+	if err := h.Service.UpdateArticle(&article); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, article)
+}

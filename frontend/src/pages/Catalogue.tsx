@@ -15,6 +15,7 @@ export const Catalogue = ({ path }: { path?: string }) => {
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [editingArticle, setEditingArticle] = useState<Article | null>(null);
 
   // Form state
   const [name, setName] = useState('');
@@ -22,6 +23,27 @@ export const Catalogue = ({ path }: { path?: string }) => {
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState(0);
   const [minThreshold, setMinThreshold] = useState(5);
+
+  const resetForm = () => {
+    setName('');
+    setSku('');
+    setDescription('');
+    setPrice(0);
+    setMinThreshold(5);
+    setEditingArticle(null);
+    setShowForm(false);
+  };
+
+  const handleEdit = (article: Article) => {
+    setEditingArticle(article);
+    setName(article.name);
+    setSku(article.sku);
+    setDescription(article.description);
+    setPrice(article.price);
+    setMinThreshold(article.min_threshold);
+    setShowForm(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const fetchArticles = async () => {
     setLoading(true);
@@ -47,9 +69,12 @@ export const Catalogue = ({ path }: { path?: string }) => {
     e.preventDefault();
     setError('');
 
+    const url = editingArticle ? `/api/articles/${editingArticle.id}` : '/api/articles';
+    const method = editingArticle ? 'PUT' : 'POST';
+
     try {
-      const response = await fetch('/api/articles', {
-        method: 'POST',
+      const response = await fetch(url, {
+        method,
         headers: { 
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}` 
@@ -65,16 +90,10 @@ export const Catalogue = ({ path }: { path?: string }) => {
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || 'Erreur lors de la création');
+        throw new Error(data.error || 'Une erreur est survenue');
       }
 
-      // Reset form and refresh list
-      setName('');
-      setSku('');
-      setDescription('');
-      setPrice(0);
-      setMinThreshold(5);
-      setShowForm(false);
+      resetForm();
       fetchArticles();
     } catch (err: any) {
       setError(err.message);
@@ -112,7 +131,7 @@ export const Catalogue = ({ path }: { path?: string }) => {
       <div className="section-header" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem'}}>
         <h1>Catalogue d'Articles</h1>
         <div className="actions" style={{display: 'flex', gap: '1rem'}}>
-          <button className="btn btn-primary" onClick={() => setShowForm(!showForm)}>
+          <button className="btn btn-primary" onClick={() => { if(showForm) resetForm(); else setShowForm(true); }}>
             {showForm ? 'Annuler' : 'Ajouter un Article'}
           </button>
           <label className="btn" style={{cursor: 'pointer', background: '#e2e8f0'}}>
@@ -126,15 +145,15 @@ export const Catalogue = ({ path }: { path?: string }) => {
 
       {showForm && (
         <div className="card" style={{marginBottom: '2rem'}}>
-          <h3>Nouvel Article</h3>
+          <h3>{editingArticle ? 'Modifier l\'Article' : 'Nouvel Article'}</h3>
           <form onSubmit={handleSubmit} className="layout-grid">
             <div className="form-group">
               <label>Nom de l'article</label>
               <input type="text" value={name} onInput={(e) => setName(e.currentTarget.value)} required />
             </div>
             <div className="form-group">
-              <label>SKU (laisser vide pour auto-générer)</label>
-              <input type="text" value={sku} onInput={(e) => setSku(e.currentTarget.value)} placeholder="Ex: ART-001" />
+              <label>SKU {editingArticle && '(non modifiable)'}</label>
+              <input type="text" value={sku} onInput={(e) => setSku(e.currentTarget.value)} placeholder="Ex: ART-001" disabled={!!editingArticle} />
             </div>
             <div className="form-group">
               <label>Description</label>
@@ -149,7 +168,9 @@ export const Catalogue = ({ path }: { path?: string }) => {
               <input type="number" value={minThreshold} onInput={(e) => setMinThreshold(Number(e.currentTarget.value))} required min="1" />
             </div>
             <div style={{gridColumn: '1 / -1'}}>
-              <button type="submit" className="btn btn-primary">Enregistrer l'article</button>
+              <button type="submit" className="btn btn-primary">
+                {editingArticle ? 'Mettre à jour l\'article' : 'Enregistrer l\'article'}
+              </button>
             </div>
           </form>
         </div>
@@ -167,6 +188,7 @@ export const Catalogue = ({ path }: { path?: string }) => {
                 <th>Prix</th>
                 <th>Seuil</th>
                 <th>Stock Global</th>
+                <th style={{textAlign: 'right'}}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -179,11 +201,16 @@ export const Catalogue = ({ path }: { path?: string }) => {
                   <td style={{fontWeight: '700', color: (article.total_stock || 0) < article.min_threshold ? 'var(--error)' : 'var(--success)'}}>
                     {article.total_stock || 0}
                   </td>
+                  <td style={{textAlign: 'right'}}>
+                    <button className="btn btn-sm" style={{background: 'var(--primary-light)', color: 'var(--primary)'}} onClick={() => handleEdit(article)}>
+                      Modifier
+                    </button>
+                  </td>
                 </tr>
               ))}
               {articles.length === 0 && (
                 <tr>
-                  <td colSpan={5} style={{textAlign: 'center', padding: '2rem'}}>Aucun article dans le catalogue</td>
+                  <td colSpan={6} style={{textAlign: 'center', padding: '2rem'}}>Aucun article dans le catalogue</td>
                 </tr>
               )}
             </tbody>

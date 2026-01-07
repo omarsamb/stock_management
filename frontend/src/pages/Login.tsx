@@ -29,8 +29,18 @@ export const Login = ({ path }: { path?: string }) => {
 
       localStorage.setItem('token', data.token);
       localStorage.setItem('user_phone', data.user.phone);
+      localStorage.setItem('user_role', data.user.role);
+      if (data.user.shop_id) localStorage.setItem('user_shop_id', data.user.shop_id);
+      if (data.account) localStorage.setItem('user_account', JSON.stringify(data.account));
+      
       window.dispatchEvent(new Event('auth-change'));
-      route('/');
+
+      if (data.must_change_password) {
+        localStorage.setItem('must_change_password', 'true');
+        route('/change-password');
+      } else {
+        route('/');
+      }
     } catch (err: any) {
       setError(err.message);
     }

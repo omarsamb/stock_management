@@ -14,6 +14,7 @@ const (
 	RoleManager UserRole = "manager"
 	RoleAnalyst UserRole = "analyst"
 	RoleAdmin   UserRole = "admin"
+	RoleVendor  UserRole = "vendor"
 )
 
 type User struct {
@@ -24,7 +25,9 @@ type User struct {
 	Role                UserRole       `gorm:"default:'manager'" json:"role"`
 	FirstName           string         `json:"first_name"`
 	LastName            string         `json:"last_name"`
+	ShopID              *uuid.UUID     `gorm:"type:uuid" json:"shop_id"`
 	IsPhoneVerified     bool           `gorm:"default:false" json:"is_phone_verified"`
+	MustChangePassword  bool           `gorm:"default:false" json:"must_change_password"`
 	VerificationCode    string         `json:"-"`
 	VerificationExpires *time.Time     `json:"-"`
 	CreatedAt           time.Time      `json:"created_at"`

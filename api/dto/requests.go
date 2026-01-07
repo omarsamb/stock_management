@@ -12,6 +12,13 @@ type CreateArticleRequest struct {
 	Price        float64    `json:"price"`
 }
 
+type UpdateArticleRequest struct {
+	Name         string  `json:"name" binding:"required"`
+	Description  string  `json:"description"`
+	MinThreshold int     `json:"min_threshold"`
+	Price        float64 `json:"price"`
+}
+
 type RecordMovementRequest struct {
 	ShopID    uuid.UUID `json:"shop_id" binding:"required"`
 	ArticleID uuid.UUID `json:"article_id" binding:"required"`
@@ -61,6 +68,25 @@ type CreateShopRequest struct {
 }
 
 type InviteUserRequest struct {
-	Phone string `json:"phone" binding:"required"`
-	Role  string `json:"role" binding:"required"`
+	FirstName string     `json:"first_name" binding:"required"`
+	LastName  string     `json:"last_name" binding:"required"`
+	Phone     string     `json:"phone" binding:"required"`
+	Role      string     `json:"role" binding:"required"`
+	ShopID    *uuid.UUID `json:"shop_id"`
+}
+
+type ChangePasswordRequest struct {
+	NewPassword string `json:"new_password" binding:"required,min=6"`
+}
+type UpdateUserRequest struct {
+	FirstName string     `json:"first_name" binding:"required"`
+	LastName  string     `json:"last_name" binding:"required"`
+	Phone     string     `json:"phone" binding:"required"`
+	Role      string     `json:"role" binding:"required"`
+	ShopID    *uuid.UUID `json:"shop_id"`
+}
+
+type UpdateThemeRequest struct {
+	PrimaryColor    string `json:"primary_color"`
+	BackgroundImage string `json:"background_image"`
 }

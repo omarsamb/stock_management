@@ -195,7 +195,7 @@ type DashboardStats struct {
 	ActiveShops     int64   `json:"active_shops"`
 }
 
-func (s *StockService) GetDashboardStats(accountID uuid.UUID) (*DashboardStats, error) {
+func (s *StockService) GetDashboardStats(accountID, shopID uuid.UUID) (*DashboardStats, error) {
 	var stats DashboardStats
 
 	// 1. Total Articles
@@ -205,20 +205,23 @@ func (s *StockService) GetDashboardStats(accountID uuid.UUID) (*DashboardStats, 
 	s.DB.Model(&models.Shop{}).Where("account_id = ?", accountID).Count(&stats.ActiveShops)
 
 	// 3. Low Stock Alerts
-	// Count StockLevels where quantity < article.min_threshold
-	s.DB.Table("stock_levels").
+	query := s.DB.Table("stock_levels").
 		Joins("JOIN articles ON articles.id = stock_levels.article_id").
-		Where("articles.account_id = ? AND stock_levels.quantity < articles.min_threshold", accountID).
-		Count(&stats.LowStockAlerts)
+		Where("articles.account_id = ? AND stock_levels.quantity < articles.min_threshold", accountID)
+	if shopID != uuid.Nil {
+		query = query.Where("stock_levels.shop_id = ?", shopID)
+	}
+	query.Count(&stats.LowStockAlerts)
 
 	// 4. Total Stock Value
-	// Sum(stock_levels.quantity * articles.price)
 	var totalValue float64
-	s.DB.Table("stock_levels").
+	queryValue := s.DB.Table("stock_levels").
 		Joins("JOIN articles ON articles.id = stock_levels.article_id").
-		Where("articles.account_id = ?", accountID).
-		Select("SUM(stock_levels.quantity * articles.price)").
-		Row().Scan(&totalValue)
+		Where("articles.account_id = ?", accountID)
+	if shopID != uuid.Nil {
+		queryValue = queryValue.Where("stock_levels.shop_id = ?", shopID)
+	}
+	queryValue.Select("SUM(stock_levels.quantity * articles.price)").Row().Scan(&totalValue)
 
 	stats.TotalStockValue = totalValue
 

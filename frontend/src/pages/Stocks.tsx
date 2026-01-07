@@ -15,7 +15,8 @@ export const Stocks = ({ path }: { path?: string }) => {
   const [articles, setArticles] = useState<Article[]>([]);
   const [shops, setShops] = useState<Shop[]>([]);
   const [selectedShop, setSelectedShop] = useState('');
-  const [moveType, setMoveType] = useState<'in' | 'out' | 'transfer'>('in');
+  const [stockLevels, setStockLevels] = useState<any[]>([]);
+  const [moveType, setMoveType] = useState<'in' | 'out' | 'transfer' | 'adjust'>('in');
   
   // Form fields
   const [articleId, setArticleId] = useState('');
@@ -44,6 +45,27 @@ export const Stocks = ({ path }: { path?: string }) => {
     .catch(err => console.error('Fetch shops failed', err));
   }, []);
 
+  const fetchStockLevels = async () => {
+    if (!selectedShop) {
+      setStockLevels([]);
+      return;
+    }
+    
+    try {
+      const res = await fetch(`/api/stocks/levels?shop_id=${selectedShop}`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      const data = await res.json();
+      setStockLevels(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Fetch stock levels failed', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchStockLevels();
+  }, [selectedShop]);
+
   const handleMovement = async (e: Event) => {
     e.preventDefault();
     setMessage({ type: '', text: '' });
@@ -67,6 +89,7 @@ export const Stocks = ({ path }: { path?: string }) => {
         const data = await response.json();
         if (!response.ok) throw new Error(data.error);
         setMessage({ type: 'success', text: 'Transfert initié !' });
+        if (shopId === selectedShop) fetchStockLevels();
       } catch (err: any) {
         setMessage({ type: 'error', text: err.message });
       }
@@ -80,6 +103,7 @@ export const Stocks = ({ path }: { path?: string }) => {
           reason
         });
         setMessage({ type: res.offline ? 'info' : 'success', text: res.message || 'Mouvement enregistré !' });
+        if (shopId === selectedShop) fetchStockLevels();
       } catch (err: any) {
         setMessage({ type: 'error', text: err.message });
       }
@@ -102,6 +126,7 @@ export const Stocks = ({ path }: { path?: string }) => {
             <button className={`tab ${moveType === 'in' ? 'active' : ''}`} onClick={() => setMoveType('in')}>Entrée</button>
             <button className={`tab ${moveType === 'out' ? 'active' : ''}`} onClick={() => setMoveType('out')}>Sortie</button>
             <button className={`tab ${moveType === 'transfer' ? 'active' : ''}`} onClick={() => setMoveType('transfer')}>Transfert</button>
+            <button className={`tab ${moveType === 'adjust' ? 'active' : ''}`} onClick={() => setMoveType('adjust')}>Ajustement</button>
           </div>
 
           {message.text && (
@@ -162,8 +187,38 @@ export const Stocks = ({ path }: { path?: string }) => {
               {shops.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           </div>
-          {/* Placeholder table for stock levels */}
-          <p style={{color: '#666', fontSize: '0.9rem'}}>Sélectionnez une boutique pour voir les niveaux de stock.</p>
+          
+          {selectedShop ? (
+            <div className="table-responsive">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Article</th>
+                    <th>Quantité</th>
+                    <th>Mise à jour</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stockLevels.map(level => (
+                    <tr key={level.article_id}>
+                      <td style={{fontWeight: '600'}}>{level.Article?.name}</td>
+                      <td style={{fontWeight: '700', color: 'var(--primary)'}}>{level.quantity}</td>
+                      <td style={{fontSize: '0.8rem', color: '#666'}}>
+                        {new Date(level.updated_at).toLocaleString()}
+                      </td>
+                    </tr>
+                  ))}
+                  {stockLevels.length === 0 && (
+                    <tr>
+                      <td colSpan={3} style={{textAlign: 'center', padding: '2rem', color: 'var(--text-light)'}}>Aucun stock enregistré pour cette boutique</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p style={{color: '#666', fontSize: '0.9rem', textAlign: 'center', padding: '2rem'}}>Sélectionnez une boutique pour voir les niveaux de stock.</p>
+          )}
         </div>
       </div>
     </div>

@@ -78,8 +78,10 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"user":  user,
-		"token": token,
+		"user":                 user,
+		"account":              user.Account,
+		"token":                token,
+		"must_change_password": user.MustChangePassword,
 	})
 }
 
@@ -155,14 +157,100 @@ func (h *AuthHandler) InviteUser(c *gin.Context) {
 	accountIDStr := c.GetString("account_id")
 	accountID, _ := uuid.Parse(accountIDStr)
 
-	user, err := h.Service.InviteUser(accountID, req.Phone, req.Role)
+	user, tempPassword, err := h.Service.InviteUser(accountID, req.Phone, req.Role, req.FirstName, req.LastName, req.ShopID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	c.JSON(http.StatusCreated, gin.H{
-		"message": "user invited successfully",
-		"user":    user,
+		"message":       "user invited successfully",
+		"user":          user,
+		"temp_password": tempPassword,
 	})
+}
+
+func (h *AuthHandler) ListUsers(c *gin.Context) {
+	accountIDStr := c.GetString("account_id")
+	accountID, _ := uuid.Parse(accountIDStr)
+
+	users, err := h.Service.GetUsersByAccount(accountID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, users)
+}
+
+func (h *AuthHandler) UpdateUser(c *gin.Context) {
+	var req dto.UpdateUserRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	userIDStr := c.Param("id")
+	userID, _ := uuid.Parse(userIDStr)
+
+	accountIDStr := c.GetString("account_id")
+	accountID, _ := uuid.Parse(accountIDStr)
+
+	if err := h.Service.UpdateUser(accountID, userID, req.FirstName, req.LastName, req.Phone, req.Role, req.ShopID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "user updated successfully"})
+}
+
+func (h *AuthHandler) DeleteUser(c *gin.Context) {
+	userIDStr := c.Param("id")
+	userID, _ := uuid.Parse(userIDStr)
+
+	accountIDStr := c.GetString("account_id")
+	accountID, _ := uuid.Parse(accountIDStr)
+
+	if err := h.Service.DeleteUser(accountID, userID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "user deleted successfully"})
+}
+
+func (h *AuthHandler) ChangePassword(c *gin.Context) {
+	var req dto.ChangePasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	userIDStr := c.GetString("user_id")
+	userID, _ := uuid.Parse(userIDStr)
+
+	if err := h.Service.ChangePassword(userID, req.NewPassword); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "password changed successfully"})
+}
+
+func (h *AuthHandler) UpdateTheme(c *gin.Context) {
+	var req dto.UpdateThemeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	accountIDStr := c.GetString("account_id")
+	accountID, _ := uuid.Parse(accountIDStr)
+
+	if err := h.Service.UpdateAccountTheme(accountID, req.PrimaryColor, req.BackgroundImage); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "theme updated successfully"})
 }
