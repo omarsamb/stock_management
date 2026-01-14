@@ -79,15 +79,22 @@ type Claims struct {
 	UserID    string `json:"user_id"`
 	AccountID string `json:"account_id"`
 	Role      string `json:"role"`
+	ShopID    string `json:"shop_id,omitempty"`
 	jwt.RegisteredClaims
 }
 
 func GenerateToken(user *models.User, secret string) (string, error) {
 	expirationTime := time.Now().Add(72 * time.Hour)
+	shopID := ""
+	if user.ShopID != nil {
+		shopID = user.ShopID.String()
+	}
+
 	claims := &Claims{
 		UserID:    user.ID.String(),
 		AccountID: user.AccountID.String(),
 		Role:      string(user.Role),
+		ShopID:    shopID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 		},

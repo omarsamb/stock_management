@@ -27,11 +27,28 @@ func (h *ArticleHandler) CreateArticle(c *gin.Context) {
 
 	accountIDStr := c.GetString("account_id")
 	accountID, _ := uuid.Parse(accountIDStr)
+	userIDStr := c.GetString("user_id")
+	userID, _ := uuid.Parse(userIDStr)
+	role := c.GetString("role")
+	userShopIDStr := c.GetString("shop_id")
+
+	// Determine ShopID for initial stock
+	var shopID *uuid.UUID
+	// If vendor, force their shop
+	if role == "vendor" && userShopIDStr != "" {
+		id, err := uuid.Parse(userShopIDStr)
+		if err == nil {
+			shopID = &id
+		}
+	} else if req.ShopID != nil {
+		// If admin/owner and they selected a shop
+		shopID = req.ShopID
+	}
 
 	article := &models.Article{
 		AccountID:    accountID,
 		Name:         req.Name,
-		SKU:          req.SKU,
+		Code:         req.Code,
 		Description:  req.Description,
 		CategoryID:   req.CategoryID,
 		BrandID:      req.BrandID,
@@ -39,7 +56,7 @@ func (h *ArticleHandler) CreateArticle(c *gin.Context) {
 		Price:        req.Price,
 	}
 
-	if err := h.Service.CreateArticle(article); err != nil {
+	if err := h.Service.CreateArticle(article, req.InitialStock, shopID, userID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -51,7 +68,39 @@ func (h *ArticleHandler) ListArticles(c *gin.Context) {
 	accountIDStr := c.GetString("account_id")
 	accountID, _ := uuid.Parse(accountIDStr)
 
-	articles, err := h.Service.GetArticlesByAccount(accountID)
+	var shopID *uuid.UUID
+
+	userRole := c.GetString("role")
+	userShopIDStr := c.GetString("shop_id")
+
+	// If user is specialized vendor (has shop_id and is vendor/manager), force shop_id
+	// Actually, generic way: if user is logged in as vendor, enforce their shop
+	// If user is specialized vendor (has shop_id and is vendor/manager), force shop_id
+	// Actually, generic way: if user is logged in as vendor, enforce their shop
+	if userRole == "vendor" {
+		if userShopIDStr == "" {
+			c.JSON(http.StatusForbidden, gin.H{"error": "vendor account configuration error: no shop assigned or outdated token"})
+			return
+		}
+		id, err := uuid.Parse(userShopIDStr)
+		if err == nil {
+			shopID = &id
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid shop id in context"})
+			return
+		}
+	} else {
+		// Otherwise (Admin or no specific restriction yet), check query param
+		shopIDStr := c.Query("shop_id")
+		if shopIDStr != "" {
+			id, err := uuid.Parse(shopIDStr)
+			if err == nil {
+				shopID = &id
+			}
+		}
+	}
+
+	articles, err := h.Service.GetArticlesByAccount(accountID, shopID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

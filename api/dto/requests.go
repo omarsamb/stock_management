@@ -4,12 +4,14 @@ import "github.com/google/uuid"
 
 type CreateArticleRequest struct {
 	Name         string     `json:"name" binding:"required"`
-	SKU          string     `json:"sku"`
+	Code         string     `json:"code"`
 	Description  string     `json:"description"`
 	CategoryID   *uuid.UUID `json:"category_id"`
 	BrandID      *uuid.UUID `json:"brand_id"`
 	MinThreshold int        `json:"min_threshold"`
 	Price        float64    `json:"price"`
+	InitialStock int        `json:"initial_stock"`
+	ShopID       *uuid.UUID `json:"shop_id"`
 }
 
 type UpdateArticleRequest struct {

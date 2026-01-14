@@ -12,7 +12,7 @@ services:
     ports:
       - "${HOST_PORT}:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql
+      - stock_management_postgres_data:/var/lib/postgresql/data
     networks:
       - stock_management_network
 
@@ -39,7 +39,7 @@ services:
       - stock_management_network
 
 volumes:
-  postgres_data:
+  stock_management_postgres_data:
 
 networks:
   stock_management_network:

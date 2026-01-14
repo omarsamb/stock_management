@@ -27,14 +27,15 @@ export const Stocks = ({ path }: { path?: string }) => {
   
   const [message, setMessage] = useState({ type: '', text: '' });
 
+  const role = localStorage.getItem('user_role');
+  const userShopId = localStorage.getItem('user_shop_id');
+
   useEffect(() => {
-    // Fetch articles
-    fetch('/api/articles', {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-    })
-    .then(res => res.json())
-    .then(setArticles)
-    .catch(err => console.error('Fetch articles failed', err));
+    // If vendor, auto-select shop
+    if (role === 'vendor' && userShopId) {
+      setShopId(userShopId);
+      setSelectedShop(userShopId);
+    }
 
     // Fetch shops
     fetch('/api/shops', {
@@ -44,6 +45,21 @@ export const Stocks = ({ path }: { path?: string }) => {
     .then(setShops)
     .catch(err => console.error('Fetch shops failed', err));
   }, []);
+
+  useEffect(() => {
+    // Fetch articles (filtered by shop if not 'in' movement)
+    let url = '/api/articles';
+    if (shopId && moveType !== 'in') {
+      url += `?shop_id=${shopId}`;
+    }
+
+    fetch(url, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    })
+    .then(res => res.json())
+    .then(setArticles)
+    .catch(err => console.error('Fetch articles failed', err));
+  }, [shopId, moveType]);
 
   const fetchStockLevels = async () => {
     if (!selectedShop) {
@@ -136,19 +152,25 @@ export const Stocks = ({ path }: { path?: string }) => {
           )}
 
           <form onSubmit={handleMovement}>
+            {/* Shop Selector - Hidden for Vendor */}
+            {role !== 'vendor' && (
+              <div className="form-group">
+                <label>{moveType === 'transfer' ? 'Boutique Source' : 'Boutique'}</label>
+                <select value={shopId} onChange={(e) => {
+                  setShopId(e.currentTarget.value);
+                  setArticleId('');
+                }} required>
+                  <option value="">Sélectionner une boutique</option>
+                  {shops.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+              </div>
+            )}
+
             <div className="form-group">
               <label>Article</label>
               <select value={articleId} onChange={(e) => setArticleId(e.currentTarget.value)} required>
                 <option value="">Sélectionner un article</option>
                 {articles.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label>{moveType === 'transfer' ? 'Boutique Source' : 'Boutique'}</label>
-              <select value={shopId} onChange={(e) => setShopId(e.currentTarget.value)} required>
-                <option value="">Sélectionner une boutique</option>
-                {shops.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
 
@@ -180,13 +202,16 @@ export const Stocks = ({ path }: { path?: string }) => {
 
         <div className="card">
           <h3>Niveaux de Stock</h3>
-          <div className="form-group">
-            <label>Filtrer par boutique</label>
-            <select value={selectedShop} onChange={(e) => setSelectedShop(e.currentTarget.value)}>
-              <option value="">Sélectionner une boutique</option>
-              {shops.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-          </div>
+          {/* Shop Filter - Hidden for Vendor */}
+          {role !== 'vendor' && (
+            <div className="form-group">
+              <label>Filtrer par boutique</label>
+              <select value={selectedShop} onChange={(e) => setSelectedShop(e.currentTarget.value)}>
+                <option value="">Sélectionner une boutique</option>
+                {shops.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </div>
+          )}
           
           {selectedShop ? (
             <div className="table-responsive">

@@ -33,3 +33,23 @@ func (h *DashboardHandler) GetStats(c *gin.Context) {
 
 	c.JSON(http.StatusOK, stats)
 }
+
+func (h *DashboardHandler) GetSalesStats(c *gin.Context) {
+	accountIDStr := c.GetString("account_id")
+	accountID, _ := uuid.Parse(accountIDStr)
+
+	shopID := uuid.Nil
+	if shopIDStr := c.Query("shop_id"); shopIDStr != "" {
+		shopID, _ = uuid.Parse(shopIDStr)
+	}
+
+	period := c.DefaultQuery("period", "month")
+
+	stats, err := h.Service.GetSalesStats(accountID, shopID, period)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, stats)
+}

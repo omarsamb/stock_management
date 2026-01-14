@@ -10,7 +10,7 @@ import (
 type Article struct {
 	ID           uuid.UUID      `gorm:"type:uuid;primaryKey" json:"id"`
 	AccountID    uuid.UUID      `gorm:"type:uuid;not null;index" json:"account_id"`
-	SKU          string         `gorm:"not null;index" json:"sku"`
+	Code         string         `gorm:"not null;index" json:"code"`
 	Name         string         `gorm:"not null" json:"name"`
 	Description  string         `json:"description"`
 	CategoryID   *uuid.UUID     `gorm:"type:uuid;index" json:"category_id"`

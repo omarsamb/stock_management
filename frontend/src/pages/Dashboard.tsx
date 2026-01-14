@@ -34,7 +34,10 @@ export const Dashboard = ({ path }: { path?: string }) => {
   };
 
   const fetchArticles = () => {
-    fetch('/api/articles', {
+    let url = '/api/articles';
+    if (selectedShopId) url += `?shop_id=${selectedShopId}`;
+
+    fetch(url, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     })
     .then(res => res.json())
@@ -127,7 +130,7 @@ export const Dashboard = ({ path }: { path?: string }) => {
 
   const filteredArticles = articles.filter(a => 
     a.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    a.sku.toLowerCase().includes(searchTerm.toLowerCase())
+    (a.code && a.code.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const currentShopName = shops.find(s => s.id === selectedShopId)?.name;
@@ -211,7 +214,7 @@ export const Dashboard = ({ path }: { path?: string }) => {
           <div className="search-bar" style={{marginBottom: '2rem'}}>
             <input 
               type="text" 
-              placeholder="Rechercher un article (Nom ou SKU)..." 
+              placeholder="Rechercher un article (Nom ou Code)..." 
               value={searchTerm}
               onInput={(e) => setSearchTerm(e.currentTarget.value)}
               style={{padding: '1rem 1.5rem', fontSize: '1.1rem', borderRadius: '1.25rem', border: '2px solid var(--primary-light)', width: '100%', outline: 'none'}}
@@ -222,7 +225,7 @@ export const Dashboard = ({ path }: { path?: string }) => {
             {filteredArticles.map(article => (
               <div key={article.id} className="card article-card" style={{padding: '1.15rem', cursor: 'pointer', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%'}} onClick={() => { setSelectedArticle(article); setIsModalOpen(true); }}>
                 <div className="article-info">
-                  <span className="sku" style={{fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-light)', display: 'block', marginBottom: '0.25rem'}}>{article.sku}</span>
+                  <span className="code" style={{fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-light)', display: 'block', marginBottom: '0.25rem'}}>{article.code}</span>
                   <h4 style={{margin: '0 0 0.5rem 0', fontSize: '0.95rem', lineHeight: '1.3'}}>{article.name}</h4>
                   <p style={{fontSize: '1.05rem', fontWeight: 900, color: 'var(--primary)', margin: 0}}>{article.price.toLocaleString()} CFA</p>
                 </div>

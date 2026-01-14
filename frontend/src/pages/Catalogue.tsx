@@ -2,7 +2,7 @@ import { useState, useEffect } from 'preact/hooks';
 
 interface Article {
   id: string;
-  sku: string;
+  code: string;
   name: string;
   description: string;
   min_threshold: number;
@@ -19,17 +19,24 @@ export const Catalogue = ({ path }: { path?: string }) => {
 
   // Form state
   const [name, setName] = useState('');
-  const [sku, setSku] = useState(''); // Optional, backend generates if empty
+  const [code, setCode] = useState(''); // Optional, backend generates if empty
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState(0);
   const [minThreshold, setMinThreshold] = useState(5);
+  const [initialStock, setInitialStock] = useState(0);
+  const [selectedShopId, setSelectedShopId] = useState('');
+  const [shops, setShops] = useState<any[]>([]);
+  
+  const role = localStorage.getItem('user_role');
 
   const resetForm = () => {
     setName('');
-    setSku('');
+    setCode('');
     setDescription('');
     setPrice(0);
     setMinThreshold(5);
+    setInitialStock(0);
+    setSelectedShopId('');
     setEditingArticle(null);
     setShowForm(false);
   };
@@ -37,10 +44,11 @@ export const Catalogue = ({ path }: { path?: string }) => {
   const handleEdit = (article: Article) => {
     setEditingArticle(article);
     setName(article.name);
-    setSku(article.sku);
+    setCode(article.code);
     setDescription(article.description);
     setPrice(article.price);
     setMinThreshold(article.min_threshold);
+    // Initial stock is only for creation, not editing
     setShowForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -61,13 +69,34 @@ export const Catalogue = ({ path }: { path?: string }) => {
     }
   };
 
+  const fetchShops = async () => {
+    try {
+      const response = await fetch('/api/shops', {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      if (response.ok) {
+        setShops(await response.json());
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
     fetchArticles();
+    if (role !== 'vendor') {
+      fetchShops();
+    }
   }, []);
 
   const handleSubmit = async (e: Event) => {
     e.preventDefault();
     setError('');
+
+    if (role !== 'vendor' && initialStock > 0 && !selectedShopId) {
+      setError("Veuillez sélectionner une boutique pour le stock initial.");
+      return;
+    }
 
     const url = editingArticle ? `/api/articles/${editingArticle.id}` : '/api/articles';
     const method = editingArticle ? 'PUT' : 'POST';
@@ -81,10 +110,12 @@ export const Catalogue = ({ path }: { path?: string }) => {
         },
         body: JSON.stringify({ 
           name, 
-          sku, 
+          code, 
           description, 
           price: Number(price), 
-          min_threshold: Number(minThreshold) 
+          min_threshold: Number(minThreshold),
+          initial_stock: Number(initialStock),
+          shop_id: selectedShopId || undefined
         })
       });
 
@@ -128,6 +159,7 @@ export const Catalogue = ({ path }: { path?: string }) => {
 
   return (
     <div className="page catalogue">
+      {/* ... header ... */}
       <div className="section-header" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem'}}>
         <h1>Catalogue d'Articles</h1>
         <div className="actions" style={{display: 'flex', gap: '1rem'}}>
@@ -152,8 +184,8 @@ export const Catalogue = ({ path }: { path?: string }) => {
               <input type="text" value={name} onInput={(e) => setName(e.currentTarget.value)} required />
             </div>
             <div className="form-group">
-              <label>SKU {editingArticle && '(non modifiable)'}</label>
-              <input type="text" value={sku} onInput={(e) => setSku(e.currentTarget.value)} placeholder="Ex: ART-001" disabled={!!editingArticle} />
+              <label>Code {editingArticle && '(non modifiable)'}</label>
+              <input type="text" value={code} onInput={(e) => setCode(e.currentTarget.value)} placeholder="Ex: ART-001" disabled={!!editingArticle} />
             </div>
             <div className="form-group">
               <label>Description</label>
@@ -167,6 +199,31 @@ export const Catalogue = ({ path }: { path?: string }) => {
               <label>Seuil d'alerte stock</label>
               <input type="number" value={minThreshold} onInput={(e) => setMinThreshold(Number(e.currentTarget.value))} required min="1" />
             </div>
+            
+            {!editingArticle && (
+              <>
+                <div className="form-group">
+                  <label>Stock Initial {role === 'vendor' ? '(Requis)' : '(Optionnel)'}</label>
+                  <input 
+                    type="number" 
+                    value={initialStock} 
+                    onInput={(e) => setInitialStock(Number(e.currentTarget.value))} 
+                    required={role === 'vendor'}
+                    min="0" 
+                  />
+                </div>
+                {role !== 'vendor' && (
+                  <div className="form-group">
+                    <label>Boutique (pour stock initial)</label>
+                    <select value={selectedShopId} onChange={(e) => setSelectedShopId(e.currentTarget.value)}>
+                      <option value="">Sélectionner une boutique</option>
+                      {shops.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                    </select>
+                  </div>
+                )}
+              </>
+            )}
+
             <div style={{gridColumn: '1 / -1'}}>
               <button type="submit" className="btn btn-primary">
                 {editingArticle ? 'Mettre à jour l\'article' : 'Enregistrer l\'article'}
@@ -183,7 +240,7 @@ export const Catalogue = ({ path }: { path?: string }) => {
           <table className="data-table">
             <thead>
               <tr>
-                <th>SKU</th>
+                <th>Code</th>
                 <th>Nom</th>
                 <th>Prix</th>
                 <th>Seuil</th>
@@ -194,7 +251,7 @@ export const Catalogue = ({ path }: { path?: string }) => {
             <tbody>
               {articles.map(article => (
                 <tr key={article.id}>
-                  <td style={{fontWeight: '600', color: '#64748b'}}>{article.sku}</td>
+                  <td style={{fontWeight: '600', color: '#64748b'}}>{article.code}</td>
                   <td>{article.name}</td>
                   <td>{article.price.toLocaleString()} CFA</td>
                   <td>{article.min_threshold}</td>

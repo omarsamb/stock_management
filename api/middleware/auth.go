@@ -38,6 +38,9 @@ func AuthMiddleware(jwtSecret string) gin.HandlerFunc {
 		c.Set("account_id", claims.AccountID)
 		c.Set("user_id", claims.UserID)
 		c.Set("role", claims.Role)
+		if claims.ShopID != "" {
+			c.Set("shop_id", claims.ShopID)
+		}
 
 		c.Next()
 	}

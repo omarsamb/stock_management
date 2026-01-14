@@ -1,10 +1,19 @@
 import { useState, useEffect } from 'preact/hooks';
+import { StockPieChart } from '../components/charts/StockPieChart';
+import { MovementBarChart } from '../components/charts/MovementBarChart';
+import { LowStockTable } from '../components/charts/LowStockTable';
+import { SalesChart } from '../components/charts/SalesChart';
 
 export const Stats = ({ path }: { path?: string }) => {
   const [shops, setShops] = useState<any[]>([]);
   const [selectedShopId, setSelectedShopId] = useState('');
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<any>(null);
+  
+  // Sales Stats State
+  const [salesPeriod, setSalesPeriod] = useState('month');
+  const [salesData, setSalesData] = useState<any[]>([]);
+  const [salesLoading, setSalesLoading] = useState(false);
 
   const fetchShops = () => {
     fetch('/api/shops', {
@@ -34,6 +43,25 @@ export const Stats = ({ path }: { path?: string }) => {
     });
   };
 
+  const fetchSalesStats = () => {
+    setSalesLoading(true);
+    let url = `/api/dashboard/sales?period=${salesPeriod}`;
+    if (selectedShopId) url += `&shop_id=${selectedShopId}`;
+
+    fetch(url, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    })
+    .then(res => res.json())
+    .then(data => {
+      setSalesData(data || []);
+      setSalesLoading(false);
+    })
+    .catch(err => {
+      console.error(err);
+      setSalesLoading(false);
+    });
+  };
+
   useEffect(() => {
     fetchShops();
   }, []);
@@ -41,6 +69,10 @@ export const Stats = ({ path }: { path?: string }) => {
   useEffect(() => {
     fetchStats();
   }, [selectedShopId]);
+
+  useEffect(() => {
+    fetchSalesStats();
+  }, [selectedShopId, salesPeriod]);
 
   return (
     <div className="page stats">
@@ -83,10 +115,49 @@ export const Stats = ({ path }: { path?: string }) => {
           </div>
 
           <div className="card" style={{marginTop: '2rem'}}>
-            <h3>Analyse des Performances</h3>
-            <div style={{padding: '2rem', textAlign: 'center', background: '#f8fafc', borderRadius: '1rem', marginTop: '1rem'}}>
-              <p style={{color: 'var(--text-light)'}}>Graphiques et tendances détaillées bientôt disponibles dans la version Pro.</p>
+            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem'}}>
+              <h3 style={{margin: 0}}>Statistiques de Vente</h3>
+              <div className="period-selector">
+                {['day', 'week', 'month', 'year'].map(p => (
+                  <button 
+                    key={p} 
+                    className={`btn btn-sm ${salesPeriod === p ? 'btn-primary' : ''}`} 
+                    style={{marginLeft: '0.5rem'}}
+                    onClick={() => setSalesPeriod(p)}
+                  >
+                    {p === 'day' ? 'Jour' : p === 'week' ? 'Semaine' : p === 'month' ? 'Mois' : 'Année'}
+                  </button>
+                ))}
+              </div>
             </div>
+            
+            <div style={{ height: '350px' }}>
+              {salesLoading ? (
+                <div className="loading">Chargement des ventes...</div>
+              ) : (
+                <SalesChart data={salesData} period={salesPeriod} />
+              )}
+            </div>
+          </div>
+
+          <div className="stats-charts-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '1.5rem', marginTop: '2rem' }}>
+            <div className="card">
+              <h3>Répartition du Stock</h3>
+              <div style={{ height: '300px', display: 'flex', justifyContent: 'center' }}>
+                <StockPieChart data={stats.stock_by_category || []} />
+              </div>
+            </div>
+            <div className="card">
+              <h3>Mouvements (30 Jours)</h3>
+              <div style={{ height: '300px' }}>
+                <MovementBarChart data={stats.daily_movements || []} />
+              </div>
+            </div>
+          </div>
+
+          <div className="card" style={{ marginTop: '2rem' }}>
+            <h3>Alertes Stock Critique</h3>
+            <LowStockTable items={stats.low_stock_items || []} />
           </div>
         </>
       )}

@@ -69,6 +69,7 @@ func SetupRoutes(sm *services.ServicesManager) *gin.Engine {
 
 			// Dashboard
 			protected.GET("/dashboard/stats", dashboardHandler.GetStats)
+			protected.GET("/dashboard/sales", dashboardHandler.GetSalesStats)
 
 			// Stocks
 			protected.POST("/stocks/movement", stockHandler.RecordMovement)

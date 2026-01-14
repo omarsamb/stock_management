@@ -12,8 +12,8 @@ type StockLevel struct {
 	Quantity  int       `gorm:"default:0" json:"quantity"`
 	UpdatedAt time.Time `json:"updated_at"`
 
-	Article Article `gorm:"foreignKey:ArticleID" json:"-"`
-	Shop    Shop    `gorm:"foreignKey:ShopID" json:"-"`
+	Article Article `gorm:"foreignKey:ArticleID"`
+	Shop    Shop    `gorm:"foreignKey:ShopID"`
 }
 
 type MovementType string
